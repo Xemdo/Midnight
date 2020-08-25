@@ -1,0 +1,35 @@
+X = Not supported
+@ = Supported
+
+Reference Page: https://wiki.vg/Classic_Protocol_Extension
+
+X ClickDistance
+X CustomBlocks
+X HeldBlock
+@ EmoteFix
+X TextHotKey
+X ExtPlayerList
+X EnvColors
+X SelectionCuboid
+X BlockPermissions
+X ChangeModel
+X EnvMapAppearance
+X EnvWeatherType
+X HackControl
+X MessageTypes
+X PlayerClick
+X LongerMessages
+X FullCP437
+X BlockDefinitions
+X BlockDefinitionsExt
+X BulkBlockUpdate
+X TextColors
+X EnvMapAspect
+X EntityProperty
+X ExtEntityPositions
+X TwoWayPing
+X InventoryOrder
+X InstanceMOTD
+X FastMap
+X ExtendedTextures
+X CustomParticles
