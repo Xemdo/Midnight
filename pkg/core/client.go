@@ -270,6 +270,14 @@ func (c Client) WritePacket_Message(playerId int8, message string) {
 	logging.Log_Debugf("[%v] [Write] {%v, %v, msg[%v]}", c.Conn.RemoteAddr(), 0x0D, playerId, message)
 }
 
+func (c Client) WritePacket_DisconnectPlayer(message string) {
+	c.Writer.WriteByte(0x0E)
+	c.Writer.Write(WritePacketUtil_PadString(message))
+	c.Writer.Flush()
+
+	logging.Log_Debugf("[%v] [Write] {%v, msg[%v]}", c.Conn.RemoteAddr(), 0x0E, string(WritePacketUtil_PadString(message)))
+}
+
 func (c Client) WritePacket_ExtInfo(appName string, extensionCount int16) {
 	c.Writer.WriteByte(0x10)                           // Packet ID
 	c.Writer.Write(WritePacketUtil_PadString(appName)) // AppName

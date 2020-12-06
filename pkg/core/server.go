@@ -12,10 +12,10 @@ import (
 type Server struct {
 	name        string
 	port        string
-	salt        string
+	Salt        string // Salt exported for use in main.go
 	public      bool
 	maxUsers    int32
-	verifyLogin bool
+	VerifyLogin bool // VerifyLogin exported for use in main.go
 
 	lvl     *Level
 	players []Player
@@ -30,11 +30,12 @@ func StartServer(ch *ClientHandler, conf *Config) *Server {
 	s.port = strconv.FormatInt(int64(conf.Port), 10)
 	s.public = conf.Public
 	s.maxUsers = int32(conf.MaxUsers)
+	s.VerifyLogin = conf.VerifyLogin
 
 	if conf.Debug.OverrideSalt == true {
-		s.salt = conf.Debug.Salt
+		s.Salt = conf.Debug.Salt
 	} else {
-		s.salt = GenerateSalt()
+		s.Salt = GenerateSalt()
 	}
 
 	s.lvl = ConstructLevel("main", 256, 256, 256)
@@ -63,8 +64,8 @@ func (s *Server) JoinUser(p Player) {
 		packet, err := p.Cli.ReadPacketEntry()
 
 		if err != nil {
-			s.disconnectPlayer(p, false)
-			break
+			s.disconnectPlayer(p, "")
+			return
 		}
 
 		switch packet {
@@ -72,7 +73,8 @@ func (s *Server) JoinUser(p Player) {
 			x, y, z, mode, blockType, err := p.Cli.ReadPacket_SetBlock()
 
 			if err != nil {
-				s.disconnectPlayer(p, false)
+				s.disconnectPlayer(p, "")
+				return
 			}
 
 			if mode == 0x00 { // Destroy
@@ -85,7 +87,8 @@ func (s *Server) JoinUser(p Player) {
 			playerId, x, y, z, yaw, pitch, err := p.Cli.ReadPacket_PositionUpdate()
 
 			if err != nil {
-				s.disconnectPlayer(p, false)
+				s.disconnectPlayer(p, "")
+				return
 			}
 
 			// TODO
@@ -100,7 +103,8 @@ func (s *Server) JoinUser(p Player) {
 			longMessage, message, err := p.Cli.ReadPacket_Message()
 
 			if err != nil {
-				s.disconnectPlayer(p, false)
+				s.disconnectPlayer(p, "")
+				return
 			}
 
 			// TODO
@@ -112,7 +116,9 @@ func (s *Server) JoinUser(p Player) {
 	}
 }
 
-func (s *Server) disconnectPlayer(p Player, sendPacket bool) {
+// Disconnects a player and reduces the number of players in the levels and the server.
+// Leave disconnectMsg empty is no 0x0e packet is being sent.
+func (s *Server) disconnectPlayer(p Player, disconnectMsg string) {
 	for i := 0; i < len(s.players); i++ {
 		if s.players[i] == p {
 			s.players = append(s.players[:i], s.players[i+1:]...)
@@ -125,16 +131,17 @@ func (s *Server) disconnectPlayer(p Player, sendPacket bool) {
 		}
 	}
 
-	if sendPacket {
-		// TODO: Send 0x0e
+	if disconnectMsg != "" {
+		p.Cli.WritePacket_DisconnectPlayer(disconnectMsg)
 	}
 
 	log.Printf("Disconnected [%v]:[%v]", p.Username, p.IP)
 }
 
 // Generates a 256-byte salt
+// Kinda broken right now? There's an issue out to improve it anyway so leave it as-is until this can be much better improved
 func GenerateSalt() string {
-	salt := make([]byte, 256)
+	salt := make([]byte, 100)
 	_, _ = io.ReadFull(rand.Reader, salt)
 	return url.QueryEscape(string(salt))
 }

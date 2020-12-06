@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"crypto/md5"
+	"encoding/hex"
 	"log"
 	"midnight/pkg/core"
 	"midnight/pkg/logging"
@@ -73,10 +75,6 @@ func newConnection(conn net.Conn, server *core.Server) {
 		return
 	}
 
-	if verify != "" {
-		// TODO: Validate this
-	}
-
 	// Write ExtInfo/ExtEntry
 	c.WritePacket_ExtInfo("Midnight", 2)
 	c.WritePacket_ExtEntry("EmoteFix", 1)
@@ -115,6 +113,16 @@ func newConnection(conn net.Conn, server *core.Server) {
 
 	// Send Handshake
 	c.WritePacket_ServerIdentification("Midnight Station", "This is Fullerton. This is a Red Line train to 95th.", true)
+
+	if server.VerifyLogin {
+		vHash := md5.New()
+		vHash.Write([]byte(server.Salt + username))
+		if verify != hex.EncodeToString(vHash.Sum(nil)) {
+			log.Printf("Cannot authenticate user; Invalid Mppass [%v] [%v]", username, conn.RemoteAddr().String())
+			c.WritePacket_DisconnectPlayer("Invalid Mppass. Please authenticate.")
+			c.Conn.Close()
+		}
+	}
 
 	// Create player & join user to server instance
 	p := core.Player{
