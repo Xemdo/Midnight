@@ -1,8 +1,11 @@
 package core
 
 import (
+	"crypto/rand"
+	"io"
 	"log"
 	"midnight/pkg/util"
+	"net/url"
 	"strconv"
 )
 
@@ -31,13 +34,16 @@ func StartServer(ch *ClientHandler, conf *Config) *Server {
 	if conf.Debug.OverrideSalt == true {
 		s.salt = conf.Debug.Salt
 	} else {
-		// TODO: Generate salt randomly
+		s.salt = GenerateSalt()
 	}
 
 	s.lvl = ConstructLevel("main", 256, 256, 256)
 	s.lvl.GenerateFlat()
 
 	// TODO: Start heartbeat
+	if s.public {
+		go BeginHeartbeatLoop(s)
+	}
 
 	return s
 }
@@ -124,4 +130,11 @@ func (s *Server) disconnectPlayer(p Player, sendPacket bool) {
 	}
 
 	log.Printf("Disconnected [%v]:[%v]", p.Username, p.IP)
+}
+
+// Generates a 256-byte salt
+func GenerateSalt() string {
+	salt := make([]byte, 256)
+	_, _ = io.ReadFull(rand.Reader, salt)
+	return url.QueryEscape(string(salt))
 }

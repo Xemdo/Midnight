@@ -1,10 +1,10 @@
 {
 	"rev" : 1,
 
-	"ip" : "127.0.0.1",
+	"ip" : "",
 	"port" : 25565,
 
-	"server_name" : "Midnight Station",
+	"server_name" : "[TEST] Midnight Station",
 	"motd" : "This is Fullerton. This is a Red Line train to 95th.",
 	"public" : true,
 	"verify_login" : true,
