@@ -118,9 +118,9 @@ func newConnection(conn net.Conn, server *core.Server) {
 		vHash := md5.New()
 		vHash.Write([]byte(server.Salt + username))
 		if verify != hex.EncodeToString(vHash.Sum(nil)) {
-			log.Printf("Cannot authenticate user; Invalid Mppass [%v] [%v]", username, conn.RemoteAddr().String())
 			c.WritePacket_DisconnectPlayer("Invalid Mppass. Please authenticate.")
 			c.Conn.Close()
+			return
 		}
 	}
 
