@@ -1,12 +1,11 @@
 package core
 
 import (
-	"crypto/rand"
-	"io"
 	"log"
+	"math/rand"
 	"midnight/pkg/util"
-	"net/url"
 	"strconv"
+	"time"
 )
 
 type Server struct {
@@ -138,10 +137,16 @@ func (s *Server) disconnectPlayer(p Player, disconnectMsg string) {
 	log.Printf("Disconnected [%v]:[%v]", p.Username, p.IP)
 }
 
+var saltRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}\\|;':\",./<>?`~")
+
 // Generates a 256-byte salt
-// Kinda broken right now? There's an issue out to improve it anyway so leave it as-is until this can be much better improved
 func GenerateSalt() string {
-	salt := make([]byte, 100)
-	_, _ = io.ReadFull(rand.Reader, salt)
-	return url.QueryEscape(string(salt))
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	b := make([]rune, 256)
+	for i := range b {
+		b[i] = saltRunes[r.Intn(len(saltRunes))]
+	}
+	log.Printf(string(b))
+	return string(b)
 }
