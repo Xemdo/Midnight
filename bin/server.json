@@ -10,6 +10,8 @@
 	"verify_login" : true,
 	"max_users" : 15,
 
+	"announce_users": true,
+
 	"debug" : {
 		"override_salt" : false,
 		"salt" : ""

@@ -49,7 +49,7 @@ func StartServer(ch *ClientHandler, conf *Config) *Server {
 	s.sch = new(TaskScheduler)
 	go s.sch.StartServerTickLoop()
 
-	s.createBasicTasks()
+	s.createBasicTasks(conf.AnnouncePlayers)
 
 	return s
 }
@@ -143,26 +143,28 @@ func (s *Server) disconnectPlayer(p Player, disconnectMsg string) {
 	log.Printf("Disconnected [%v]:[%v]", p.Username, p.IP)
 }
 
-func (s *Server) createBasicTasks() {
-	// Create player announcement task
-	plTask := Task{
-		Id:           "players-announce",
-		ExecDelay:    180000, // 3 minutes
-		DelayedStart: true,
-		TaskFunc: func() {
-			playerList := ""
-			for c, player := range s.players {
-				if c != 0 {
-					playerList += ", "
+func (s *Server) createBasicTasks(plTaskEnabled bool) {
+	if plTaskEnabled {
+		// Create player announcement task
+		plTask := Task{
+			Id:           "players-announce",
+			ExecDelay:    300000, // 5 minutes
+			DelayedStart: true,
+			TaskFunc: func() {
+				playerList := ""
+				for c, player := range s.players {
+					if c != 0 {
+						playerList += ", "
+					}
+					playerList += player.Username
 				}
-				playerList += player.Username
-			}
-			// TODO: Print as server message to all players
-			log.Printf("Players Online: [ %v ]", playerList)
-		},
-	}
+				// TODO: Print as server message to all players
+				log.Printf("Players Online: [ %v ]", playerList)
+			},
+		}
 
-	s.sch.AddTask(plTask)
+		s.sch.AddTask(plTask)
+	}
 }
 
 var saltRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}\\|;':\",./<>?`~")

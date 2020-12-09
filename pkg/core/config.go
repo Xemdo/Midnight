@@ -16,6 +16,8 @@ type Config struct {
 	VerifyLogin bool    `json:"verify_login"`
 	MaxUsers    float64 `json:"max_users"`
 
+	AnnouncePlayers bool `json:"announce_users"`
+
 	Debug struct {
 		OverrideSalt bool   `json:"override_salt"`
 		Salt         string `json:"salt"`
