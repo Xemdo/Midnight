@@ -19,7 +19,8 @@ type Server struct {
 	lvl     *Level
 	players []Player
 
-	ch *ClientHandler
+	ch  *ClientHandler
+	sch *TaskScheduler
 }
 
 func StartServer(ch *ClientHandler, conf *Config) *Server {
@@ -40,10 +41,15 @@ func StartServer(ch *ClientHandler, conf *Config) *Server {
 	s.lvl = ConstructLevel("main", 256, 256, 256)
 	s.lvl.GenerateFlat()
 
-	// TODO: Start heartbeat
 	if s.public {
 		go BeginHeartbeatLoop(s)
 	}
+
+	log.Printf("Starting task scheduler/loop")
+	s.sch = new(TaskScheduler)
+	go s.sch.StartServerTickLoop()
+
+	s.createBasicTasks()
 
 	return s
 }
@@ -137,6 +143,28 @@ func (s *Server) disconnectPlayer(p Player, disconnectMsg string) {
 	log.Printf("Disconnected [%v]:[%v]", p.Username, p.IP)
 }
 
+func (s *Server) createBasicTasks() {
+	// Create player announcement task
+	plTask := Task{
+		Id:           "players-announce",
+		ExecDelay:    180000, // 3 minutes
+		DelayedStart: true,
+		TaskFunc: func() {
+			playerList := ""
+			for c, player := range s.players {
+				if c != 0 {
+					playerList += ", "
+				}
+				playerList += player.Username
+			}
+			// TODO: Print as server message to all players
+			log.Printf("Players Online: [ %v ]", playerList)
+		},
+	}
+
+	s.sch.AddTask(plTask)
+}
+
 var saltRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}\\|;':\",./<>?`~")
 
 // Generates a 256-byte salt
@@ -147,6 +175,5 @@ func GenerateSalt() string {
 	for i := range b {
 		b[i] = saltRunes[r.Intn(len(saltRunes))]
 	}
-	log.Printf(string(b))
 	return string(b)
 }
