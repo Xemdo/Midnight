@@ -61,9 +61,10 @@ func (s *Server) JoinUser(p Player) {
 	s.players = append(s.players, p)
 	s.lvl.Players = append(s.lvl.Players, p)
 
+	log.Printf("%v has joined the server [%v]", p.Username, p.IP)
+
 	p.Cli.WritePacketUtil_SendLevel(s.lvl)
 	p.Cli.WritePacket_SpawnPlayer(s.lvl.SpawnPos, 0, 0, -1, p.Username)
-	//p.Cli.WritePacket_PlayerTeleport(s.lvl.SpawnPos, 0, 0, -1)
 
 	for {
 		packet, err := p.Cli.ReadPacketEntry()
@@ -112,9 +113,11 @@ func (s *Server) JoinUser(p Player) {
 				return
 			}
 
-			// TODO
+			// TODO: Enable Long Message
 			_ = longMessage
-			_ = message
+
+			s.handleIncomingMessage(p, message)
+
 		default:
 			log.Printf("Test: %v", packet)
 		}
@@ -141,6 +144,31 @@ func (s *Server) disconnectPlayer(p Player, disconnectMsg string) {
 	}
 
 	log.Printf("Disconnected [%v]:[%v]", p.Username, p.IP)
+}
+
+func (s *Server) handleIncomingMessage(sender Player, msg string) {
+	formatted := "&e" + sender.Username + ": &f" + msg
+
+	for _, p := range s.players {
+		s.SendMessage(p, formatted)
+	}
+
+	log.Printf("[Chat] %v: %v", sender.Username, msg)
+}
+
+func (s *Server) SendMessage(p Player, msg string) {
+	// TODO: Remove 64-char limit
+	if len(msg) > 64 {
+		msg = msg[0:64]
+	}
+
+	p.Cli.WritePacket_Message(-1, msg)
+}
+
+func (s *Server) SendAnnouncement(msg string) {
+	for _, p := range s.players {
+		s.SendMessage(p, "&e[Server] "+msg)
+	}
 }
 
 func (s *Server) createBasicTasks(plTaskEnabled bool) {

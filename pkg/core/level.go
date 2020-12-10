@@ -63,7 +63,6 @@ func (l *Level) ChangeBlock(block byte, pos util.Vector3i16) {
 
 	for i := 0; i < len(l.Players); i++ {
 		l.Players[i].Cli.WritePacket_SetBlock(block, pos.X, pos.Y, pos.Z)
-		l.Players[i].Cli.WritePacket_Message(-1, "&fChanged block")
 	}
 }
 

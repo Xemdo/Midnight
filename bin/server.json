@@ -7,7 +7,7 @@
 	"server_name" : "[TEST] Midnight Station",
 	"motd" : "This is Fullerton. This is a Red Line train to 95th.",
 	"public" : true,
-	"verify_login" : true,
+	"verify_login" : false,
 	"max_users" : 15,
 
 	"announce_users": true,

@@ -8,6 +8,7 @@ import (
 	"midnight/pkg/core"
 	"midnight/pkg/logging"
 	"net"
+	"os"
 	"strconv"
 )
 
@@ -18,24 +19,34 @@ func main() {
 		core.SaveConfigToFile(conf)
 	}
 
-	ch, err := core.BeginClientHandling(conf.IP, strconv.FormatInt(int64(conf.Port), 10))
-	if err != nil {
-		log.Fatalf("Could not start server: %v", err)
-		return
-	}
+	var s *core.Server
 
-	s := core.StartServer(ch, conf)
-	log.Println("Started server. Accepting clients.")
-
-	for {
-		conn, err := ch.Listener.Accept()
+	go func() {
+		ch, err := core.BeginClientHandling(conf.IP, strconv.FormatInt(int64(conf.Port), 10))
 		if err != nil {
-			log.Println("Could not accept client:")
-			log.Println(err)
-			continue
+			log.Fatalf("Could not start server: %v", err)
+			return
 		}
 
-		go newConnection(conn, s)
+		s = core.StartServer(ch, conf)
+		log.Println("Started server. Accepting clients.")
+
+		for {
+			conn, err := ch.Listener.Accept()
+			if err != nil {
+				log.Println("Could not accept client:")
+				log.Println(err)
+				continue
+			}
+
+			go newConnection(conn, s)
+		}
+	}()
+
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for scanner.Scan() {
+		s.SendAnnouncement(scanner.Text())
 	}
 }
 

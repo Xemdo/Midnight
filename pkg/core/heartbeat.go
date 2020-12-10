@@ -11,6 +11,7 @@ import (
 
 func BeginHeartbeatLoop(srv *Server) {
 	log.Printf("Starting ClassiCube.net Heartbeat...")
+	firstSent := false
 	for {
 		v := url.Values{}
 		v.Set("name", srv.name)
@@ -37,7 +38,10 @@ func BeginHeartbeatLoop(srv *Server) {
 			break
 		}
 
-		log.Printf("Heartbeat sent: %s", data)
+		if !firstSent {
+			log.Printf("Heartbeat sent: %s", data)
+			firstSent = true
+		}
 
 		time.Sleep(time.Minute)
 	}
