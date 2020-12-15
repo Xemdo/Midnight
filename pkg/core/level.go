@@ -12,7 +12,7 @@ type Level struct {
 	SpawnPos    util.Vector3i16
 	BlocksTotal int32
 	Data        []byte
-	Players     []Player
+	Players     map[int8]Player
 }
 
 func ConstructLevel(name string, x int16, y int16, z int16) *Level {
@@ -21,6 +21,7 @@ func ConstructLevel(name string, x int16, y int16, z int16) *Level {
 	l.Size.X = x
 	l.Size.Y = y
 	l.Size.Z = z
+	l.Players = make(map[int8]Player)
 
 	l.BlocksTotal = int32(l.Size.X) * int32(l.Size.Y) * int32(l.Size.Z)
 
@@ -62,7 +63,9 @@ func (l *Level) ChangeBlock(block byte, pos util.Vector3i16) {
 	l.Data[x+sizeX*(z+sizeZ*y)] = block
 
 	for i := 0; i < len(l.Players); i++ {
-		l.Players[i].Cli.WritePacket_SetBlock(block, pos.X, pos.Y, pos.Z)
+		for _, p := range l.Players {
+			p.Cli.WritePacket_SetBlock(block, pos.X, pos.Y, pos.Z)
+		}
 	}
 }
 

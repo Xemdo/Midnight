@@ -4,9 +4,12 @@ import (
 	"log"
 	"math/rand"
 	"midnight/pkg/util"
+	"regexp"
 	"strconv"
 	"time"
 )
+
+var colorCodeRegex *regexp.Regexp = regexp.MustCompile(`%([0-9a-fA-F])`)
 
 type Server struct {
 	name        string
@@ -17,7 +20,7 @@ type Server struct {
 	VerifyLogin bool // VerifyLogin exported for use in main.go
 
 	lvl     *Level
-	players []Player
+	players map[int8]Player
 
 	ch  *ClientHandler
 	sch *TaskScheduler
@@ -31,6 +34,7 @@ func StartServer(ch *ClientHandler, conf *Config) *Server {
 	s.public = conf.Public
 	s.maxUsers = int32(conf.MaxUsers)
 	s.VerifyLogin = conf.VerifyLogin
+	s.players = make(map[int8]Player)
 
 	if conf.Debug.OverrideSalt == true {
 		s.Salt = conf.Debug.Salt
@@ -55,17 +59,28 @@ func StartServer(ch *ClientHandler, conf *Config) *Server {
 }
 
 func (s *Server) JoinUser(p Player) {
-	// Add to player list
-	// Send level
+	// Find open player ID
+	// TODO: Make this per-level instead of per-server. Right now it imposes a limit of 127 people in the server
 
-	s.players = append(s.players, p)
-	s.lvl.Players = append(s.lvl.Players, p)
+	var playerId int8
+	for i := int8(1); i < 127; i++ {
+		if _, found := s.players[i]; !found {
+			playerId = i
+		}
+	}
+
+	p.PlayerId = playerId
+
+	s.players[playerId] = p
+	s.lvl.Players[playerId] = p
 
 	log.Printf("%v has joined the server [%v]", p.Username, p.IP)
 
+	// Send level
 	p.Cli.WritePacketUtil_SendLevel(s.lvl)
 	p.Cli.WritePacket_SpawnPlayer(s.lvl.SpawnPos, 0, 0, -1, p.Username)
 
+	// Player packet recieve loop
 	for {
 		packet, err := p.Cli.ReadPacketEntry()
 
@@ -105,6 +120,11 @@ func (s *Server) JoinUser(p Player) {
 			_ = yaw
 			_ = pitch
 
+			// Update position to all players in level
+			for p := range s.players {
+				_ = p
+			}
+
 		case 0x0D:
 			longMessage, message, err := p.Cli.ReadPacket_Message()
 
@@ -127,17 +147,8 @@ func (s *Server) JoinUser(p Player) {
 // Disconnects a player and reduces the number of players in the levels and the server.
 // Leave disconnectMsg empty is no 0x0e packet is being sent.
 func (s *Server) disconnectPlayer(p Player, disconnectMsg string) {
-	for i := 0; i < len(s.players); i++ {
-		if s.players[i] == p {
-			s.players = append(s.players[:i], s.players[i+1:]...)
-		}
-	}
-
-	for i := 0; i < len(s.lvl.Players); i++ {
-		if s.lvl.Players[i] == p {
-			s.lvl.Players = append(s.lvl.Players[:i], s.lvl.Players[i+1:]...)
-		}
-	}
+	delete(s.players, p.PlayerId)     // Remove player from server player list
+	delete(s.lvl.Players, p.PlayerId) // Remove player from level player list
 
 	if disconnectMsg != "" {
 		p.Cli.WritePacket_DisconnectPlayer(disconnectMsg)
@@ -162,6 +173,9 @@ func (s *Server) SendMessage(p Player, msg string) {
 		msg = msg[0:64]
 	}
 
+	// Change color codes from % to &. E.g. %e becomes &e
+	msg = colorCodeRegex.ReplaceAllString(msg, "&${1}")
+
 	p.Cli.WritePacket_Message(-1, msg)
 }
 
@@ -180,12 +194,13 @@ func (s *Server) createBasicTasks(plTaskEnabled bool) {
 			DelayedStart: true,
 			TaskFunc: func() {
 				playerList := ""
-				for c, player := range s.players {
-					if c != 0 {
+				for _, player := range s.players {
+					if playerList != "" {
 						playerList += ", "
 					}
-					playerList += player.Username
+					playerList += player.Username + "[" + strconv.Itoa(int(player.PlayerId)) + "]"
 				}
+
 				// TODO: Print as server message to all players
 				log.Printf("Players Online: [ %v ]", playerList)
 			},

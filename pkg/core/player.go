@@ -5,4 +5,5 @@ type Player struct {
 	Username        string
 	IP              string
 	Client_Software string
+	PlayerId        int8
 }
