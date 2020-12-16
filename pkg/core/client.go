@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"math"
 	"midnight/pkg/logging"
-	"midnight/pkg/util"
 	"net"
 	"strings"
 )
@@ -228,37 +227,39 @@ func (c Client) WritePacket_SetBlock(block byte, x int16, y int16, z int16) {
 	logging.Log_Debugf("[%v] [Write] {%v, %v, %v, %v, %v}", c.Conn.RemoteAddr(), 0x06, x, y, z, block)
 }
 
-func (c Client) WritePacket_SpawnPlayer(pos util.Vector3i16, yaw byte, pitch byte, playerId int8, playerName string) {
+func (c Client) WritePacket_SpawnPlayer(posX, posY, posZ float32, yaw byte, pitch byte, playerId int8, playerName string) {
 	c.Writer.WriteByte(0x07)
 	c.Writer.WriteByte(byte(playerId))
 	c.Writer.Write(WritePacketUtil_PadString(playerName))
-	c.WriteShort(pos.X * 32)
-	c.WriteShort(pos.Y * 32)
-	c.WriteShort(pos.Z * 32)
+	c.WriteShort(int16(posX * 32))
+	c.WriteShort(int16(posY * 32))
+	c.WriteShort(int16(posZ * 32))
 	c.Writer.WriteByte(yaw)
 	c.Writer.WriteByte(pitch)
 	c.Writer.Flush()
 
 	logging.Log_Debugf("[%v] [Write] {%v, %v, %v, %v, %v, %v, %v, %v}",
-		c.Conn.RemoteAddr(), 0x07, playerId, string(WritePacketUtil_PadString(playerName)), pos.X, pos.Y, pos.Z, yaw, pitch)
+		c.Conn.RemoteAddr(), 0x07, playerId, string(WritePacketUtil_PadString(playerName)), int16(posX*32), int16(posY*32), int16(posZ*32), yaw, pitch)
 }
 
-func (c Client) WritePacket_PlayerTeleport(pos util.Vector3i16, yaw byte, pitch byte, playerId int8) {
-	pos.X *= 32
-	pos.Y *= 32
-	pos.Z *= 32
-
+func (c Client) WritePacket_PlayerTeleport(posX, posY, posZ float32, yaw byte, pitch byte, playerId int8) {
 	c.Writer.WriteByte(0x08)
 	c.Writer.WriteByte(byte(playerId))
-	c.WriteShort(pos.X)
-	c.WriteShort(pos.Y)
-	c.WriteShort(pos.Z)
+	c.WriteShort(int16(posX * 32))
+	c.WriteShort(int16(posY * 32))
+	c.WriteShort(int16(posZ * 32))
 	c.Writer.WriteByte(yaw)
 	c.Writer.WriteByte(pitch)
 	c.Writer.Flush()
 
 	logging.Log_Debugf("[%v] [Write] {%v, %v, %v, %v, %v, %v, %v}",
-		c.Conn.RemoteAddr(), 0x08, playerId, pos.X, pos.Y, pos.Z, yaw, pitch)
+		c.Conn.RemoteAddr(), 0x08, playerId, int16(posX*32), int16(posY*32), int16(posZ*32), yaw, pitch)
+}
+
+func (c Client) WritePacket_DespawnPlayer(playerId int8) {
+	c.Writer.WriteByte(0x0C)
+	c.Writer.WriteByte(byte(playerId))
+	c.Writer.Flush()
 }
 
 func (c Client) WritePacket_Message(playerId int8, message string) {

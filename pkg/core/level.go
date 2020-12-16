@@ -9,7 +9,7 @@ import (
 type Level struct {
 	Name        string
 	Size        util.Vector3i16
-	SpawnPos    util.Vector3i16
+	SpawnPos    []float32
 	BlocksTotal int32
 	Data        []byte
 	Players     map[int8]Player
@@ -25,11 +25,10 @@ func ConstructLevel(name string, x int16, y int16, z int16) *Level {
 
 	l.BlocksTotal = int32(l.Size.X) * int32(l.Size.Y) * int32(l.Size.Z)
 
-	l.SpawnPos = util.Vector3i16{
-		X: x / 2,
-		Y: (z / 2) + 5,
-		Z: y / 2,
-	}
+	l.SpawnPos = make([]float32, 3)
+	l.SpawnPos[0] = float32(x) / 2
+	l.SpawnPos[1] = (float32(z) / 2) + 5
+	l.SpawnPos[2] = float32(y) / 2
 
 	return l
 }

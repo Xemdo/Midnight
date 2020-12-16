@@ -71,6 +71,10 @@ func (s *Server) JoinUser(p Player) {
 
 	p.PlayerId = playerId
 
+	p.PosX = s.lvl.SpawnPos[0]
+	p.PosY = s.lvl.SpawnPos[1]
+	p.PosZ = s.lvl.SpawnPos[2]
+
 	s.players[playerId] = p
 	s.lvl.Players[playerId] = p
 
@@ -78,7 +82,20 @@ func (s *Server) JoinUser(p Player) {
 
 	// Send level
 	p.Cli.WritePacketUtil_SendLevel(s.lvl)
-	p.Cli.WritePacket_SpawnPlayer(s.lvl.SpawnPos, 0, 0, -1, p.Username)
+	p.Cli.WritePacket_SpawnPlayer(p.PosX, p.PosY, p.PosZ, 0, 0, -1, p.Username)
+
+	// Send spawn packet for this user to all other players
+	for _, otherP := range s.lvl.Players {
+		if otherP == p {
+			continue // No need to send to self
+		}
+
+		// TODO: Allow setting Pitch and Yaw for spawn points
+		otherP.Cli.WritePacket_SpawnPlayer(s.lvl.SpawnPos[0], s.lvl.SpawnPos[1], s.lvl.SpawnPos[2], 0, 0, p.PlayerId, p.Username)
+
+		// Now the other way around! Send spawn packets for all existing users to this player
+		p.Cli.WritePacket_SpawnPlayer(otherP.PosX, otherP.PosY, otherP.PosZ, otherP.Yaw, otherP.Pitch, otherP.PlayerId, otherP.Username)
+	}
 
 	// Player packet recieve loop
 	for {
@@ -120,9 +137,24 @@ func (s *Server) JoinUser(p Player) {
 			_ = yaw
 			_ = pitch
 
-			// Update position to all players in level
-			for p := range s.players {
-				_ = p
+			if p.PosX != x || p.PosY != y || p.PosZ != z || p.Pitch != pitch || p.Yaw != yaw {
+				p.PosX = x
+				p.PosY = y
+				p.PosZ = z
+				p.Pitch = pitch
+				p.Yaw = yaw
+
+				s.players[p.PlayerId] = p
+				s.lvl.Players[p.PlayerId] = p
+
+				// Update position to all players in level
+				for _, otherP := range s.lvl.Players {
+					if otherP == p {
+						continue // No need to send to self
+					}
+
+					otherP.Cli.WritePacket_PlayerTeleport(x, y, z, yaw, pitch, p.PlayerId)
+				}
 			}
 
 		case 0x0D:
@@ -149,6 +181,11 @@ func (s *Server) JoinUser(p Player) {
 func (s *Server) disconnectPlayer(p Player, disconnectMsg string) {
 	delete(s.players, p.PlayerId)     // Remove player from server player list
 	delete(s.lvl.Players, p.PlayerId) // Remove player from level player list
+
+	// Despawn player for all other players in level
+	for _, otherP := range s.lvl.Players {
+		otherP.Cli.WritePacket_DespawnPlayer(p.PlayerId)
+	}
 
 	if disconnectMsg != "" {
 		p.Cli.WritePacket_DisconnectPlayer(disconnectMsg)
